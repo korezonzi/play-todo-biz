@@ -13,10 +13,20 @@ import models._
 //MessagesControllerComponents: Playの国際化機能を使用するため
 //MessagesAbstractController:   コントローラ内でdbアクセスや国際化機能を利用するため
 class UserController @Inject()(components: MessagesControllerComponents) extends MessagesAbstractController(components) {
-  //TODOメソッドは、501レスポンスを返す
+  private val u = Users.syntax("u")
 
+  //TODOメソッドは、501レスポンスを返す
   //一覧表示
-  def list = TODO
+  def list = Action { implicit request =>
+    DB.readOnly { implicit session =>
+      //ユーザのリストを取得
+      val users = withSQL {
+        select.from(Users as u).orderBy(u.id.asc)
+      }.map(Users(u.resultName)).list.apply()
+      //一覧表示を表示する
+      Ok(views.html.user.list(users))
+    }
+  }
 
   //編集画面表示
   def edit(id: Option[Long]) = TODO
