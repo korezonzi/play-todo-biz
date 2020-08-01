@@ -7,6 +7,25 @@ import javax.inject.Inject
 import scalikejdbc._
 import models._
 
+//コンパニオンオブジェクト: 同じ名前のクラスと同ファイルに定義されたもの
+//対応するクラスやトレイトは互いにprivateなメンバーにアクセス出来る
+object UserController {
+  //フォームの値を格納するケースクラス
+  case class UserForm(
+    id:        Option[Long],
+    name:      String,
+    companyId: Option[Int]
+  )
+  ///formから送信されたデータ <-> ケースクラスへの変換を行う
+  val userForm = Form(
+    mapping(
+      "id"        -> optional(longNumber),
+      "name"      -> nonEmptyText(maxLength = 20),
+      "companyId" -> optional(number)
+    )(UserForm.apply)(UserForm.unapply)
+  )
+}
+
 //以下、2つをGoogle Guice のDI機能を使用するために、@Injectされてる
 //@Inject: DIのためのアノテーション
 
