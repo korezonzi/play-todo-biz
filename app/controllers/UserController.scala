@@ -112,5 +112,14 @@ class UserController @Inject()(components: MessagesControllerComponents) extends
   }
 
   //削除実行
-  def remove(id: Long) = TODO
+  def remove(id: Long) = Action { implicit request =>
+    DB.localTx { implicit session =>
+      //ユーザ削除
+      Users.find(id).foreach { user =>
+        Users.destroy(user)
+      }
+      //一覧画面へリダイレクト
+      Redirect(routes.UserController.list)
+    }
+  }
 }

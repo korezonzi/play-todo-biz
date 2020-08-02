@@ -8,6 +8,7 @@
 
 GET     /                           controllers.HomeController.index
 GET     /user/list                  controllers.UserController.list
+# View側: idの有無でルーティング変えてる
 GET     /user/edit                  controllers.UserController.edit(id: Option[Long] ?= None )
 POST    /user/create                controllers.UserController.create
 POST    /user/update                controllers.UserController.update
