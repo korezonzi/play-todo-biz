@@ -42,8 +42,11 @@ class UserController @Inject()(components: MessagesControllerComponents) extends
     DB.readOnly { implicit session =>
       //ユーザのリストを取得
       val users = withSQL {
-        select.from(Users as u).orderBy(u.id.asc)
-      }.map(Users(u.resultName)).list.apply()
+        select.from(Users as u).leftJoin(Companies as c).on(u.companyId, c.id).orderBy(u.id.asc)
+      }.map { rs =>
+        //COMPANIESテーブルのIDをOpt[Int]で取得できた場合: Companiesクラスにマッピング
+        (Users(u)(rs), rs.intOpt(c.resultName.id).map(_ => Companies(c)(rs)))
+      }.list.apply()
       //一覧表示を表示する
       Ok(views.html.user.list(users))
     }
@@ -54,7 +57,7 @@ class UserController @Inject()(components: MessagesControllerComponents) extends
     DB.readOnly { implicit session =>
       //リクエストパラメータにIDが存在する場合
       val form = id match {
-          //IDない時は新規登録フォーム
+        //IDない時は新規登録フォーム
         //亜kらのFormを渡してる
         case None     => userForm
         case Some(id) => Users.find(id) match {
@@ -96,19 +99,20 @@ class UserController @Inject()(components: MessagesControllerComponents) extends
   def update = Action { implicit request =>
     DB.localTx { implicit session =>
       //リクエストの内容をバインド
-    userForm.bindFromRequest.fold(
-      error => {
-        BadRequest(views.html.user.edit(error, Companies.findAll()))
-      },
-      //OK; 更新を行い,一覧画面へリダイレクト
-      form => {
-        Users.find(form.id.get).foreach{ user =>
-          Users.save(user.copy(name = form.name, companyId = form.companyId))
+      userForm.bindFromRequest.fold(
+        error => {
+          BadRequest(views.html.user.edit(error, Companies.findAll()))
+        },
+        //OK; 更新を行い,一覧画面へリダイレクト
+        form => {
+          Users.find(form.id.get).foreach { user =>
+            Users.save(user.copy(name = form.name, companyId = form.companyId))
+          }
+          //一覧画面をリダイレクト
+          Redirect(routes.UserController.list)
         }
-        //一覧画面をリダイレクト
-        Redirect(routes.UserController.list)
-      }
-    )}
+      )
+    }
   }
 
   //削除実行

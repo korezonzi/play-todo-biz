@@ -1,9 +1,9 @@
-@*implicit: CSRFヘルパー使用のために必要*@
-@(users: Seq[models.Users])(implicit request: RequestHeader)
-
 @import helper._
 
-@*main.scala.htmlを呼び出す*@
+@*implicit: CSRFヘルパー使用のために必要*@
+@(users: Seq[(models.Users, Option[models.Companies])])(implicit request: RequestHeader)
+
+@* main.scala.htmlを呼び出す *@
 @main("ユーザ一覧") {
   <div>
     <a href="@routes.UserController.edit()" class="btn btn-success" role="button">
@@ -20,12 +20,13 @@
         </tr>
       </thead>
       <tbody>
-        @users.map { user =>
+        @users.map{ case (user, company) =>
           <tr>
             <td>@user.id</td>
             <td>
               <a href="@routes.UserController.edit(Some(user.id))">@user.name</a>
             </td>
+            <td>@company.map(_.name)</td>
             <td>
               @*CSRFを指定するだけで自動的にトークンを使用したCSRF機能を利用できる*@
               @helper.form(CSRF(routes.UserController.remove(user.id))){
