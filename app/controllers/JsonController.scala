@@ -14,25 +14,48 @@ object JsonController {
   //USERSテーブルのUsersクラスをjsonに変換するためのWritesを定義
   //Play2のDSLを利用するver
   implicit val usersWrites = (
-    (__ \ "id"       ).write[Long] and
-    (__ \ "name"     ).write[String] and
-    (__ \ "companyId").writeNullable[Int]
-  )(unlift(Users.unapply))
+    (__ \ "id").write[Long] and
+      (__ \ "name").write[String] and
+      (__ \ "companyId").writeNullable[Int]
+    ) (unlift(Users.unapply))
 
-//  //利用しない場合
-//  implicit val usersWritesFormat = new Writes[Users] {
-//    def writes(user: Users): JsValue = {
-//      Json.obj(
-//        "id" -> user.id,
-//        "name"      -> user.name,
-//        "companyId" -> user.companyId
-//      )
-//    }
-//  }
+  //  //利用しない場合
+  //  implicit val usersWritesFormat = new Writes[Users] {
+  //    def writes(user: Users): JsValue = {
+  //      Json.obj(
+  //        "id" -> user.id,
+  //        "name"      -> user.name,
+  //        "companyId" -> user.companyId
+  //      )
+  //    }
+  //  }
+
+  //ユーザ情報を受け取るためのケースクラス
+  case class UserForm(
+    id: Option[Long],
+    name: String,
+    companyId: Option[Int]
+  )
+
+  //JSONをUserFormに変換するためのReads
+  //明示的にマッピングする方法
+  implicit val userFormReads = (
+    (__ \ "id").readNullable[Long] and
+      (__ \ "name").read[String] and
+      (__ \ "companyId").readNullable[Int]
+    ) (UserForm)
+
+  //マクロを使ってシンプルに書くやり方
+  /*implicit val userFormReads  = Json.reads[UserForm]
+  implicit val userFormWrites = Json.writes[UserForm]*/
+
+  //reads,writes両方が必要な時にシンプル
+  /*implicit val userFormFormat = Json.format[UserForm]*/
 }
 
 class JsonController @Inject()(components: ControllerComponents) extends AbstractController(components) {
   private val u = Users.syntax("u")
+
   def list = Action { implicit request =>
     DB.readOnly { implicit session =>
       //ユーザのリストを取得
@@ -45,9 +68,34 @@ class JsonController @Inject()(components: ControllerComponents) extends Abstrac
     }
   }
 
-  def create = TODO
+  //JSONリクエストを受け取る際: Action(parse.json)を指定
+  def create = Action(parse.json) { implicit request =>
+    request.body.validate[UserForm].map { form =>
+      //OK: ユーザを登録
+      DB.localTx { implicit session =>
+        Users.create(form.name, form.companyId)
+        Ok(Json.obj("result" -> "success"))
+      }
+    }.recoverTotal { e =>
+      //NG: バリデーションエラー
+      BadRequest(Json.obj("resutl" -> "failure", "error" -> JsError.toJson(e)))
+    }
+  }
 
-  def update = TODO
+  def update = Action(parse.json) { implicit request =>
+    request.body.validate[UserForm].map { form =>
+      //Ok: ユーザ情報を更新
+      DB.localTx { implicit session =>
+        Users.find(form.id.get).foreach { user =>
+          Users.save(user.copy(name = form.name, companyId = form.companyId))
+        }
+        Ok(Json.obj("result" -> "success"))
+      }
+    }.recoverTotal { e =>
+      //NG: バリデーションエラー
+      BadRequest(Json.obj("result" -> "failure", "error" -> JsError.toJson(e)))
+    }
+  }
 
   def remove(id: Long) = TODO
 }
