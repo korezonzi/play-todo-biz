@@ -97,5 +97,13 @@ class JsonController @Inject()(components: ControllerComponents) extends Abstrac
     }
   }
 
-  def remove(id: Long) = TODO
+  def remove(id: Long) = Action {implicit request =>
+    DB.localTx { implicit session =>
+      //ユーザ削除
+      Users.find(id).foreach{ user =>
+        Users.destroy(user)
+      }
+      Ok(Json.obj("result" -> "success"))
+    }
+  }
 }
