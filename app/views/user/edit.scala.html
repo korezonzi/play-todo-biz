@@ -1,0 +1,30 @@
+@import helper._
+
+@(userForm: Form[controllers.UserController.UserForm], companies: Seq[models.Companies])(implicit request: MessagesRequestHeader)
+
+@main("ユーザ作成") {
+  @form(
+    /*ID有: 更新処理, なし: 登録処理*/
+    CSRF(userForm("id").value.map(_ => routes.UserController.update).getOrElse(routes.UserController.create)),
+    Symbol("class") -> "container", Symbol("role") -> "form") {
+    <fieldset>
+      <div class="form-group">
+        @inputText(userForm("name"), Symbol("label") -> "名前")
+      </div>
+      <div class="form-group">
+        @select(
+          userForm("companyId"),
+          companies.map(company => company.id.toString -> company.name).toSeq,
+          Symbol("lavel") -> "会社",
+          Symbol("default") -> "-- 会社名を選択してください --"
+        )
+      </div>
+      @userForm("id").value.map { value =>
+        <input type="hidden" name = "id" value="@value"/>
+      }
+      <div>
+        <input type="submit" value="保存" class="btn btn-success"/>
+      </div>
+    </fieldset>
+  }
+}
